@@ -3,12 +3,13 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 //constants
 const SCALE = 1e-9; // 1 meter in real world = 1e-9 units in your scene
+const TIME_SCALE = 5000000;
 const earth_mass = 5.972e24; //10^7
 const earth_radius =  6.37e8 * SCALE * 3;
 const sun_radius = 6.96e8 * SCALE * 3; // 3x exaggeration for visibility
 const G = 6.67430e-11;
 const sun_mass = 1.989e30; // Gravitational Constant
-const dt = 1/60;
+const dt = 1/60 * TIME_SCALE;
 
 // Set up scene, camera, and renderer
 const scene = new THREE.Scene();
@@ -16,7 +17,7 @@ scene.background = new THREE.Color(0x000000); // black space
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
 camera.position.set(0, 0, 400); // 400 scene units = 4e11 m real-world distance
-//camera.lookAt(0, 0, 0);
+camera.lookAt(0, 0, 0);
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -59,7 +60,14 @@ velocity.y = position.x;
 velocity.z = 0;
 velocity.normalize().multiplyScalar(speed);
 
-//const controls = new OrbitControls(camera, renderer.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
+
+// 1. Create an empty array of points and a line
+const trailPoints = [];
+const trailGeometry = new THREE.BufferGeometry();
+const trailMaterial = new THREE.LineBasicMaterial({ color: 0x00aaff });
+const orbitTrail = new THREE.Line(trailGeometry, trailMaterial);
+scene.add(orbitTrail);
 
 // Animation loop
 function animate() {
@@ -71,7 +79,7 @@ function animate() {
   let r = position.length();
   //print(unit_vector);
   let acceleration = position.clone().normalize().multiplyScalar(-G * sun_mass / (r * r));
-  acceleration.negate();
+  //acceleration.negate();
 
   // Earth orbit (circular for now)
   velocity.add(acceleration.clone().multiplyScalar(dt));
@@ -82,12 +90,17 @@ function animate() {
   let renderPosition = position.clone().multiplyScalar(SCALE);
 
   earth.position.copy(renderPosition);
-
   console.log(earth.position);
+
+  controls.update();
+  trailPoints.push(earth.position.clone());
+  if (trailPoints.length > 1000) trailPoints.shift();
+  orbitTrail.geometry.dispose();
+  orbitTrail.geometry = new THREE.BufferGeometry().setFromPoints(trailPoints);
+
   renderer.render(scene, camera);
 
-  camera.lookAt(earth.position);
-  //controls.update();
+  //camera.lookAt(earth.position);
 }
 
 animate();
