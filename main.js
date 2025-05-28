@@ -1,15 +1,31 @@
 import * as THREE from 'three';
+import GUI from 'lil-gui';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 //constants
 const SCALE = 1e-9; // 1 meter in real world = 1e-9 units in your scene
 const TIME_SCALE = 5000000;
-const earth_mass = 5.972e24; //10^7
+const earth_mass = 5.972e24;
 const earth_radius =  6.37e8 * SCALE * 3;
 const sun_radius = 6.96e8 * SCALE * 3; // 3x exaggeration for visibility
 const G = 6.67430e-11;
-const sun_mass = 1.989e30; // Gravitational Constant
+let sun_mass = 1.989e30; // Gravitational Constant
 const dt = 1/60 * TIME_SCALE;
+
+const gui = new GUI();
+
+const params = {
+  sunMass: sun_mass,
+  aphelion: 2.5e11,
+  initialX: 1.5e11,
+  reset: () => resetOrbit(),
+};
+
+gui.add(params, 'sunMass', 1e30, 3e30).name('Sun Mass (kg)');
+gui.add(params, 'aphelion', 1e11, 5e11).name('Aphelion (m)');
+gui.add(params, 'initialX', 1e11, 2e11).name('Initial X (m)');
+gui.add(params, 'reset').name('Reset Orbit');
+
 
 // Set up scene, camera, and renderer
 const scene = new THREE.Scene();
@@ -102,6 +118,26 @@ function animate() {
 
   //camera.lookAt(earth.position);
 }
+
+function resetOrbit() {
+  // Update global variables
+  sun_mass = params.sunMass;
+  let a = params.aphelion;
+  position = new THREE.Vector3(params.initialX, 0, 0);
+  let r = position.length();
+  let speed = Math.sqrt(G * sun_mass * (2 / r - 1 / a));
+  
+  velocity = new THREE.Vector3(-position.y, position.x, 0).normalize().multiplyScalar(speed);
+
+  // Update render position
+  earth.position.copy(position.clone().multiplyScalar(SCALE));
+
+  // Reset trail
+  trailPoints.length = 0;
+  orbitTrail.geometry.dispose();
+  orbitTrail.geometry = new THREE.BufferGeometry().setFromPoints(trailPoints);
+}
+
 
 animate();
 
